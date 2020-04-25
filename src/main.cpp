@@ -8,11 +8,12 @@
 
 #include <iostream>
 
-int main() {
+int main()
+{
 	glfwInit();
 
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-	GLFWwindow* window = glfwCreateWindow(800, 600, "Viper", nullptr, nullptr);
+	GLFWwindow *window = glfwCreateWindow(800, 600, "Viper", nullptr, nullptr);
 
 	uint32_t extensionCount = 0;
 	vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, nullptr);
@@ -23,7 +24,8 @@ int main() {
 	// glm::vec4 vec;
 	// auto test = matrix * vec;
 
-	while (!glfwWindowShouldClose(window)) {
+	while (!glfwWindowShouldClose(window))
+	{
 		glfwPollEvents();
 	}
 
