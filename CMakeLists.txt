@@ -13,9 +13,14 @@ add_executable(Viper src/main.cpp)
 find_package(Vulkan REQUIRED)
 
 if(Vulkan_FOUND)
-target_compile_definitions(Viper PRIVATE VK_USE_PLATFORM_WIN32_KHR)
-target_include_directories(Viper PRIVATE Vulkan::Vulkan)
-target_link_libraries(Viper PRIVATE Vulkan::Vulkan)
+    if(WIN32)
+        target_compile_definitions(Viper PRIVATE VK_USE_PLATFORM_WIN32_KHR)
+    elseif(UNIX)
+        # TODO: Wayland support
+        target_compile_definitions(Viper PRIVATE VK_USE_PLATFORM_XCB_KHR)
+    endif()
+    target_include_directories(Viper PRIVATE Vulkan::Vulkan)
+    target_link_libraries(Viper PRIVATE Vulkan::Vulkan)
 endif()
 
 add_subdirectory(libs/glfw EXCLUDE_FROM_ALL)
