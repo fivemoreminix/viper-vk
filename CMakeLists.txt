@@ -2,12 +2,13 @@ cmake_minimum_required(VERSION 3.17)
 
 project(Viper VERSION 0.1.0 DESCRIPTION "Viper the opensource video editor" LANGUAGES CXX C)
 
-add_executable(Viper src/main.cpp)
-
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules")
+
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED YES)
 set(CMAKE_CXX_EXTENSIONS NO)
+
+add_executable(Viper src/main.cpp)
 
 find_package(Vulkan REQUIRED)
 
