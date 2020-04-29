@@ -49,6 +49,7 @@ private:
 	// Swap chain
 	VkSwapchainKHR m_swapChain;
 	std::vector<VkImage> m_swapChainImages;
+	std::vector<VkImageView> m_swapChainImageViews;
 	VkFormat m_swapChainImageFormat;
 	VkExtent2D m_swapChainExtent;
 
@@ -67,6 +68,7 @@ private:
 		pickPhysicalDevice();
 		createLogicalDevice();
 		createSwapChain();
+		createImageViews();
 	}
 
 	/// Create the Vulkan instance.
@@ -418,6 +420,35 @@ private:
 		vkGetSwapchainImagesKHR(m_device, m_swapChain, &image_count, m_swapChainImages.data());
 	}
 
+	void createImageViews() {
+		m_swapChainImageViews.resize(m_swapChainImages.size());
+
+		for (size_t i = 0; i < m_swapChainImages.size(); i++) {
+			VkImageViewCreateInfo create_info{};
+			create_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+			create_info.image = m_swapChainImages[i];
+
+			create_info.viewType = VK_IMAGE_VIEW_TYPE_2D; // How do we treat images?
+			create_info.format = m_swapChainImageFormat;
+
+			create_info.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
+			create_info.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
+			create_info.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
+			create_info.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
+
+			// What is the image's purpose, and which part of the image should be accessed?
+			create_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+			create_info.subresourceRange.baseMipLevel = 0;
+			create_info.subresourceRange.levelCount = 1;
+			create_info.subresourceRange.baseArrayLayer = 0;
+			create_info.subresourceRange.layerCount = 1;
+
+			if (vkCreateImageView(m_device, &create_info, nullptr, &m_swapChainImageViews[i]) != VK_SUCCESS) {
+				throw std::runtime_error("failed to create image views!");
+			}
+		}
+	}
+
 	void mainLoop() {
 		while (!glfwWindowShouldClose(m_window)) {
 			glfwPollEvents();
@@ -426,6 +457,9 @@ private:
 
 	void cleanup() {
 		// Vulkan cleanup
+		for (auto image_view : m_swapChainImageViews) { // Destroy image views
+			vkDestroyImageView(m_device, image_view, nullptr);
+		} // (Images are destroyed automatically by destroying the swap chain)
 		vkDestroySwapchainKHR(m_device, m_swapChain, nullptr);
 		vkDestroyDevice(m_device, nullptr);
 		vkDestroySurfaceKHR(m_instance, m_surface, nullptr);
