@@ -18,6 +18,10 @@ const std::vector<const char*> validationLayers = {
 	"VK_LAYER_KHRONOS_validation"
 };
 
+const std::vector<const char*> requiredDeviceExtensions = {
+	VK_KHR_SWAPCHAIN_EXTENSION_NAME
+};
+
 #ifdef NDEBUG
 const bool enableValidationLayers = false;
 #else
@@ -33,10 +37,6 @@ public:
 		cleanup();
 	}
 
-	~TriangleApplication() {
-		cleanup();
-	}
-
 private:
 	GLFWwindow* m_window;
 	VkInstance m_instance;
@@ -45,9 +45,8 @@ private:
 	VkDevice m_device;
 	VkQueue m_graphicsQueue;
 	VkQueue m_presentQueue;
-	const std::vector<const char*> m_requiredDeviceExtensions = {
-		VK_KHR_SWAPCHAIN_EXTENSION_NAME
-	};
+
+	// Swap chain
 	VkSwapchainKHR m_swapChain;
 	std::vector<VkImage> m_swapChainImages;
 	VkFormat m_swapChainImageFormat;
@@ -70,6 +69,7 @@ private:
 		createSwapChain();
 	}
 
+	/// Create the Vulkan instance.
 	void createInstance() {
 		if (enableValidationLayers && !checkValidationLayerSupport()) {
 			throw std::runtime_error("validation layers requested, but not available!");
@@ -146,6 +146,7 @@ private:
 		return true;
 	}
 
+	/// Select a GPU with Vulkan support to use for rendering.
 	void pickPhysicalDevice() {
 		uint32_t deviceCount = 0;
 		vkEnumeratePhysicalDevices(m_instance, &deviceCount, nullptr);
@@ -169,6 +170,7 @@ private:
 		}
 	}
 
+	/// Returns true if the given GPU has valid queue families and supports required device extensions and features for the swap chain.
 	bool isDeviceSuitable(VkPhysicalDevice dev) {
 		QueueFamilyIndices indices = findQueueFamilies(dev);
 
@@ -183,6 +185,7 @@ private:
 		return indices.isComplete() && extensionsSupported && swapChainAdequate;
 	}
 
+	/// Returns true if the given GPU supports the required extensions found in `requiredDeviceExtensions`.
 	bool checkDeviceExtensionSupport(VkPhysicalDevice dev) {
 		uint32_t extensionCount;
 		vkEnumerateDeviceExtensionProperties(dev, nullptr, &extensionCount, nullptr);
@@ -190,7 +193,7 @@ private:
 		std::vector<VkExtensionProperties> availableExtensions(extensionCount);
 		vkEnumerateDeviceExtensionProperties(dev, nullptr, &extensionCount, availableExtensions.data());
 
-		std::set<std::string> requiredExtensions(m_requiredDeviceExtensions.begin(), m_requiredDeviceExtensions.end());
+		std::set<std::string> requiredExtensions(requiredDeviceExtensions.begin(), requiredDeviceExtensions.end());
 
 		for (const auto& extension : availableExtensions) {
 			requiredExtensions.erase(extension.extensionName);
@@ -208,6 +211,7 @@ private:
 		}
 	};
 
+	/// Returns the queue families for graphics and rendering in a QueueFamilyIndices struct.
 	QueueFamilyIndices findQueueFamilies(VkPhysicalDevice dev) {
 		QueueFamilyIndices indices;
 
@@ -220,7 +224,7 @@ private:
 		int i = 0;
 		for (const auto& queue_family : queue_families) {
 			VkBool32 presentSupport = false;
-			vkGetPhysicalDeviceSurfaceSupportKHR(dev, i, m_surface, &presentSupport);
+			vkGetPhysicalDeviceSurfaceSupportKHR(dev, i, m_surface, &presentSupport); // Does this GPU support rendering to surfaces for this queue family?
 
 			if (presentSupport) {
 				indices.presentFamily = i;
@@ -237,14 +241,15 @@ private:
 		return indices;
 	}
 
+	/// Create the logical device `m_device` to the physical GPU `m_physicalDevice`.
 	void createLogicalDevice() {
 		QueueFamilyIndices indices = findQueueFamilies(m_physicalDevice);
 
+		// Turn queue family indexes into queue family creation infos ...
 		std::vector<VkDeviceQueueCreateInfo> queue_create_infos;
 		std::set<uint32_t> unique_queue_families = {indices.graphicsFamily.value(), indices.presentFamily.value()};
 
-		float queue_priority = 1.0f;
-
+		const float queue_priority = 1.0f;
 		for (uint32_t queue_family : unique_queue_families) {
 			VkDeviceQueueCreateInfo queue_create_info{};
 			queue_create_info.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
@@ -254,16 +259,17 @@ private:
 			queue_create_infos.push_back(queue_create_info);
 		}
 
-		VkPhysicalDeviceFeatures device_features{};
+		VkPhysicalDeviceFeatures device_features{}; // Use default values
 
+		// Now we complete the information about the logical device we're creating ...
 		VkDeviceCreateInfo create_info{};
 		create_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
 		create_info.queueCreateInfoCount = static_cast<uint32_t>(queue_create_infos.size());
 		create_info.pQueueCreateInfos = queue_create_infos.data();
 
 		// Enable device extensions
-		create_info.enabledExtensionCount = static_cast<uint32_t>(m_requiredDeviceExtensions.size());
-		create_info.ppEnabledExtensionNames = m_requiredDeviceExtensions.data();
+		create_info.enabledExtensionCount = static_cast<uint32_t>(requiredDeviceExtensions.size());
+		create_info.ppEnabledExtensionNames = requiredDeviceExtensions.data();
 
 		create_info.pEnabledFeatures = &device_features;
 
@@ -352,10 +358,12 @@ private:
 	void createSwapChain() {
 		SwapChainSupportDetails swap_chain_support = querySwapChainSupport(m_physicalDevice);
 
+		// Of the swap chain's supported modes and formats, we will choose the best options for the three:
 		VkSurfaceFormatKHR surface_format = chooseSwapSurfaceFormat(swap_chain_support.formats);
 		VkPresentModeKHR present_mode = chooseSwapPresentMode(swap_chain_support.presentModes);
 		VkExtent2D extent = chooseSwapExtent(swap_chain_support.capabilities);
 
+		// Assign some member variables ...
 		m_swapChainImageFormat = surface_format.format;
 		m_swapChainExtent = extent;
 
@@ -379,6 +387,7 @@ private:
 		create_info.imageArrayLayers = 1;
 		create_info.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
+		// The swap chain needs to know which queue families will own the images ...
 		QueueFamilyIndices indices = findQueueFamilies(m_physicalDevice);
 		uint32_t queue_family_indices[] = {indices.graphicsFamily.value(), indices.presentFamily.value()};
 
@@ -392,6 +401,7 @@ private:
 			create_info.pQueueFamilyIndices = nullptr; // Optional
 		}
 
+		// Some miscellaneous swap chain creation information.
 		create_info.preTransform = swap_chain_support.capabilities.currentTransform;
 		create_info.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
 		create_info.presentMode = present_mode;
@@ -402,6 +412,7 @@ private:
 			throw std::runtime_error("failed to create the swap chain!");
 		}
 
+		// Obtain references to the swap chain images
 		vkGetSwapchainImagesKHR(m_device, m_swapChain, &image_count, nullptr);
 		m_swapChainImages.resize(image_count);
 		vkGetSwapchainImagesKHR(m_device, m_swapChain, &image_count, m_swapChainImages.data());
